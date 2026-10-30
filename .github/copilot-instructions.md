@@ -1,53 +1,46 @@
 # Copilot Instructions for uritools
 
-## Project
-
-- RFC 3986 URI parsing, classification and composition; replaces `urllib.parse`
-- Pure Python ≥ 3.10, no runtime dependencies, `setuptools` build
-- One module: `src/uritools/__init__.py`; stubs in `__init__.pyi` (+ `py.typed`)
-- Tests: `unittest` under `tests/`, run by `pytest`; docs: Sphinx in `docs/`
-- Lint/format: `ruff`; type check: `pyright` (`standard` mode)
-- Single maintainer; `master` = releases, `develop` = integration (Dependabot target)
+RFC 3986 URI parsing, classification and composition. Pure Python ≥ 3.10, no runtime
+dependencies, one module (`src/uritools/__init__.py`) plus stubs (`__init__.pyi`).
+Single maintainer; `master` = releases, `develop` = integration and Dependabot target.
 
 ## Commands
 
 ```bash
-tox                                              # everything (CI runs this)
+tox                                              # everything; CI runs exactly this
 tox -e py -- tests/test_split.py -k ipv6         # tests; posargs go to pytest
 tox -e ruff,ruff-format,pyright                  # lint, format check, types
 tox -e docs,doctest                              # Sphinx -W; needs network
 PYTHONPATH=src python3 -m pytest tests/          # without tox (tests src, not site-packages)
-PYTHONPATH=src python3 -m doctest README.rst     # README examples (not run by tox)
+PYTHONPATH=src python3 -m doctest README.rst     # README examples; tox does not run them
 ```
 
-Pass criteria: all tests green, 100% line coverage, `ruff` clean, `pyright` 0 errors.
+Green means: all tests pass, 100% line coverage, `ruff` clean, `pyright` 0 errors.
 `pyright` warnings on `re.match(...).groups()` are expected; do not add guards for them.
 
 ## Code style
 
-Every public function takes `str` or `bytes`; dispatch on the input, change both paths:
+Every public function takes `str` or `bytes`. Dispatch on the input; change both paths:
 
 ```python
 if isinstance(uristring, bytes):
     result = SplitResultBytes
 else:
     result = SplitResultString
-return result(*result._match(uristring).groups())
 ```
 
-Docstrings describe types in prose; no annotations in `.py` files, types go in
-`__init__.pyi` with `str` overloads before the keyword-only `encoding: None` ones:
+No type annotations in `.py` files; types live in `__init__.pyi` (`str` overloads
+before the keyword-only `encoding: None` ones). Docstrings name types in prose:
 
 ```python
-def getport(self, default=None):
-    """Return the port subcomponent of the URI authority as an
-    :class:`int`, or `default` if the original URI reference did
-    not contain a port or if the port was empty.
+"""Return the port subcomponent of the URI authority as an
+:class:`int`, or `default` if the original URI reference did
+not contain a port or if the port was empty.
 
-    """
+"""
 ```
 
-Tests: `unittest.TestCase` with a `check()` helper, a `str` and a `bytes` case per
+Tests: `unittest.TestCase` with a `check()` helper, one `str` and one `bytes` case per
 input, RFC 3986 examples in `test_rfc3986*()`, edge cases in `test_abnormal()`:
 
 ```python
@@ -60,8 +53,7 @@ for uri, authority in cases:
 ```
 
 Docs (`docs/index.rst`): prose wrapped at column 70, two spaces after a sentence,
-directive bodies indented 3 spaces, single backticks for parameters, Sphinx roles
-for objects:
+directive bodies indented 3 spaces, single backticks for parameters, roles for objects:
 
 ```rst
 .. autofunction:: uricompose
@@ -70,42 +62,35 @@ for objects:
    will be encoded according to `encoding`, or :class:`bytes` objects.
 ```
 
-Changelog (`CHANGELOG.rst`, release-only): imperative one-liner with a period,
-``double backticks``, "(breaking change)" tag, two blank lines between releases:
-
-```rst
-- Require Python 3.9 or later (breaking change).
-```
+Changelog entry (release commits only): `- Require Python 3.9 or later (breaking change).`
 
 ## Architecture constraints
 
-- Results are `namedtuple` subclasses: keep tuple access and `get*()` methods working
+- Results are `namedtuple` subclasses: tuple access and `get*()` methods both stay
 - `get*()` methods return `str` (or `ipaddress` objects) unless `encoding=None`
-- `uricompose()` returns `str`; invalid component types raise `TypeError` or
-  `ValueError`, never a leaked `AttributeError`
-- Percent-encoding uses uppercase hex; safe sets per component (`_SAFE_PATH`, ...)
-- IP literals: `ipaddress` module, output bracketed and compressed; reject IPvFuture
+- `uricompose()` returns `str`; bad component types raise `TypeError` or `ValueError`,
+  never a leaked `AttributeError`
+- Percent-encoding uses uppercase hex; safe characters per component (`_SAFE_PATH`, ...)
+- IP literals via `ipaddress`; output bracketed and compressed; IPvFuture is rejected
 - Hot path: no avoidable Python-level calls in `urisplit()` / `uriencode()`
 
 ## Boundaries
 
-- Do not edit `CHANGELOG.rst` or bump `__version__`; both happen in release commits
-- Do not add submodules, runtime dependencies, or entries to `__all__`
-- Do not rename `SplitResultBytes` / `SplitResultString`; semi-private, stays so
-- Do not "fix" these (tested, documented, decided):
-  `getscheme()`/`getfragment()` decode `bytes` input to `str`; `gethost()` returns
-  `""` for an empty host with `default=None`; an empty port matches as `""` and
-  `getport()` returns the default; `_encoded` grows per `safe` value;
-  `getauthority()` calls three getters; the FIXME/TODO comments stay
+- Never edit `CHANGELOG.rst` or `__version__`; both change in release commits only
+- Never add submodules, runtime dependencies, or names to `__all__`
+- Never rename `SplitResultBytes` / `SplitResultString`; semi-private by decision
+- Never "fix" these; they are tested, documented and decided: `getscheme()` and
+  `getfragment()` decode `bytes` input to `str`; `gethost()` returns `""` for an empty
+  host with `default=None`; an empty port matches as `""` and `getport()` returns the
+  default; `_encoded` grows per `safe` value; the FIXME/TODO comments stay
 - Feature requests are not accepted; bug reports require the latest release
-- This file stays under 150 lines; update it in the same PR as a convention change
+- Keep this file under 100 lines; change it in the same PR as the convention
 
-## Git workflow
+## Git
 
 - Branch from `develop`, PR to `develop`; `master` receives releases only
-- CI: GitHub Actions on push and PR, CPython 3.10–3.14 (+ `3.13t`, `3.14t`), PyPy
-  3.10/3.11; actions pinned by SHA with a `# vX.Y.Z` comment, bump both together
-- Adding a Python version: CI matrix and `pyproject.toml` classifiers
-- Code reviews amend `.github/copilot-review.md` in place: header (date, commit, CI,
-  coverage, one *Verified* paragraph), tables `# | Priority | Location | Finding`
-  ordered High → Info, renumbered; resolved rows are removed; a review changes no code
+- Commit subject: one imperative sentence ending with a period (`Fix RTD version handling.`)
+- New Python version: add it to the CI matrix and the `pyproject.toml` classifiers
+- Reviews amend `.github/copilot-review.md` in place: header (date, commit, CI, coverage,
+  one *Verified* paragraph), tables `# | Priority | Location | Finding` ordered
+  High → Info and renumbered, resolved rows removed; a review changes no code
