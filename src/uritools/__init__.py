@@ -6,6 +6,8 @@ commonly used functions of the Python Standard Library
 
 """
 
+# pyright: reportAttributeAccessIssue=false, reportOptionalMemberAccess=false
+
 import collections
 import collections.abc
 import ipaddress
