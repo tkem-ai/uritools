@@ -241,3 +241,22 @@ class ComposeTest(unittest.TestCase):
         ]
         for sep, uri, query in cases:
             self.check(uri, query=query, querysep=sep)
+
+    def test_encoding(self):
+        cases = [
+            ("//%E4@example.com", {"userinfo": "\xe4", "host": "example.com"}),
+            ("/%E4", {"path": "/\xe4"}),
+            ("?name=%E4", {"query": "name=\xe4"}),
+            ("?name=%E4", {"query": {"name": "\xe4"}}),
+            ("?name=%E4", {"query": [("name", "\xe4")]}),
+            ("#%E4", {"fragment": "\xe4"}),
+        ]
+        for uri, kwargs in cases:
+            self.check(uri, encoding="latin-1", **kwargs)
+        # host is always encoded as UTF-8
+        self.check("//%C3%A4", host="\xe4", encoding="latin-1")
+        # bytes components are not affected by encoding
+        self.check("/%C3%A4", path=b"/\xc3\xa4", encoding="latin-1")
+        # characters not representable in encoding
+        with self.assertRaises(UnicodeEncodeError):
+            uricompose(path="/\u20ac", encoding="latin-1")
