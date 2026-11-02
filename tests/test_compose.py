@@ -241,3 +241,22 @@ class ComposeTest(unittest.TestCase):
         ]
         for sep, uri, query in cases:
             self.check(uri, query=query, querysep=sep)
+
+    def test_fragment(self):
+        cases = [
+            ("", None),
+            ("#", ""),
+            ("#", b""),
+            ("#nose", "nose"),
+            ("#nose", b"nose"),
+            ("#foo%20bar", "foo bar"),
+            ("#foo%20bar", b"foo bar"),
+            ("#a/b?c:d@e", "a/b?c:d@e"),
+            ("#a/b?c:d@e", b"a/b?c:d@e"),
+            ("#a%23b", "a#b"),
+            ("#a%23b", b"a#b"),
+            ("#%C3%A4", "\xe4"),
+            ("#%C3%A4", b"\xc3\xa4"),
+        ]
+        for uri, fragment in cases:
+            self.check(uri, fragment=fragment)
