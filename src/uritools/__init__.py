@@ -76,7 +76,7 @@ def uriencode(uristring, safe="", encoding="utf-8", errors="strict"):
     """Encode a URI string or string component."""
     if not isinstance(uristring, bytes):
         uristring = uristring.encode(encoding, errors)
-    if not isinstance(safe, bytes):
+    if isinstance(safe, str):
         safe = safe.encode("ascii")
     # FIXME: though unlikely, _encoded may grow without bounds if arbitrary
     # safe values are passed by a caller - consider using @functools.lru_cache
@@ -86,7 +86,7 @@ def uriencode(uristring, safe="", encoding="utf-8", errors="strict"):
     except KeyError:
         encoded = _encoded[b""][:]
         for i in safe:
-            encoded[i] = bytes([i])  # type: ignore
+            encoded[i] = bytes([i])
         _encoded[safe] = encoded
     return b"".join(map(encoded.__getitem__, uristring))
 

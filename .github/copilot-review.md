@@ -16,13 +16,13 @@ and `doctest`.
 **Coverage:** 100% line and branch coverage of `src/uritools/__init__.py` (394
 statements, 186 branches).
 
-**Verified:** All ten `type: ignore` comments are needed: with
-`enableTypeIgnoreComments = false`, `pyright` reports 12 errors, each on an ignored
-line, and `reportUnnecessaryTypeIgnoreComment = "error"` passes. The nine in
-`tests/` pass deliberately invalid types to exercise runtime `TypeError` /
-`ValueError` (`reportArgumentType`) or access `Optional` `authority`
-(`reportOptionalMemberAccess`); `__init__.py` line 89 stems from the unannotated
-`safe`, iterated as `int | str` (`reportCallIssue`, `reportArgumentType`). The
+**Verified:** All nine `type: ignore` comments, all in `tests/`, are needed: with
+`enableTypeIgnoreComments = false`, `pyright` reports 9 errors, each on an ignored
+line, and `reportUnnecessaryTypeIgnoreComment = "error"` passes. They pass
+deliberately invalid types to exercise runtime `TypeError` / `ValueError`
+(`reportArgumentType`) or access `Optional` `authority`
+(`reportOptionalMemberAccess`). `__init__.py` needs none: `uriencode()` narrows
+`safe` with `isinstance(safe, str)`, so the loop variable is `int`. The
 former newline finding is fixed by `dfe83cf` (probe: `//foo%0Abar`, `ValueError`
 for `scheme="http\n"`, fragment `'a\nb'`) and removed, as is the red-`pyright`
 finding. Line numbers refer to `HEAD`.
@@ -44,7 +44,7 @@ return `str` (decoding bytes when needed), and type stubs reflect this.
 | 3 | Info | `_AUTHORITY_RE_*` port group | Regex `(?::([0-9]*))?` captures empty port string for URIs like `http://host:`. Handled correctly downstream (`getport()` returns default for empty port). No bug. |
 | 4 | Info | `match(...).groups()` in `urisplit()` (line 559), `fullmatch(...).groups()` in `uricompose()` (lines 760, 762) | `pyright` would report that the match may be `None`. `SplitResult._RE` is not end-anchored and every group is optional; the `_AUTHORITY_RE_*` groups are optional and `(.*?)` with `re.DOTALL` absorbs any remainder, so all three always match. No guard needed; the rule is off (Code #5). |
 | 5 | Info | `# pyright: reportAttributeAccessIssue=false, reportOptionalMemberAccess=false` (line 9) | Documented in `copilot-instructions.md`. Trade-off: unlike the former `pyproject.toml` downgrades, both rules are off for the whole module, so an attribute typo such as `self._SLAHS` is no longer reported; tests catch it only on a covered path. |
-| 6 | Info | All ten `# type: ignore` (line 89; `tests/test_compose.py` lines 76, 124, 126, 136, 138, 233; `tests/test_split.py` lines 295, 297, 319) | Unscoped, as documented in `copilot-instructions.md`: each silences every rule on its line. `# pyright: ignore[<rule>]` would keep other rules live if that convention changes. |
+| 6 | Info | All nine `# type: ignore` (`tests/test_compose.py` lines 76, 124, 126, 136, 138, 233; `tests/test_split.py` lines 295, 297, 319) | Unscoped, as documented in `copilot-instructions.md`: each silences every rule on its line. `# pyright: ignore[<rule>]` would keep other rules live if that convention changes. |
 
 No implementation bugs found.
 
