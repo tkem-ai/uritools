@@ -143,6 +143,25 @@ class ComposeTest(unittest.TestCase):
             ("//user@example.com:42", "", "user", "example.com", 42),
             ("//user@example.com:42", "example.com", "user", None, 42),
             ("//user@example.com:42", "user@:42", None, "example.com", None),
+            ("//user@example.com:42", b"", b"user", b"example.com", b"42"),
+            ("//user@example.com:42", b"example.com", b"user", None, 42),
+            ("//user@example.com:42", b"user@:42", None, b"example.com", None),
+            ("//user@example.com:42", b"user@:42", None, "example.com", None),
+            ("//user@example.com:42", "user@:42", None, b"example.com", None),
+            (
+                "//user@example.com:42",
+                b"nobody@localhost:80",
+                "user",
+                b"example.com",
+                "42",
+            ),
+            (
+                "//user@example.com:42",
+                "nobody@localhost:80",
+                b"user",
+                "example.com",
+                b"42",
+            ),
         ]
         for uri, authority, userinfo, host, port in cases:
             self.check(
