@@ -296,6 +296,35 @@ class SplitTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             urisplit("").getauthority(("userinfo", "test.python.org"))  # type: ignore
 
+    def test_getauthority_bytes_default(self):
+        default = (b"nobody", b"localhost", 42)
+        cases = [
+            ("urn:example:animal:ferret:nose", (b"nobody", b"localhost", 42)),
+            ("file:///", (b"nobody", b"localhost", 42)),
+            ("http://Test.python.org/foo/", (b"nobody", "test.python.org", 42)),
+            ("http://@Test.python.org:5432/foo/", ("", "test.python.org", 5432)),
+            (
+                "http://userinfo@Test.python.org:5432/foo/",
+                ("userinfo", "test.python.org", 5432),
+            ),
+        ]
+        for uri, authority in cases:
+            self.assertEqual(urisplit(uri).getauthority(default), authority)
+            self.assertEqual(urisplit(uri.encode()).getauthority(default), authority)
+        # with encoding=None, a present userinfo is returned as bytes
+        cases = [
+            ("urn:example:animal:ferret:nose", (b"nobody", b"localhost", 42)),
+            (
+                "http://userinfo@Test.python.org/foo/",
+                (b"userinfo", "test.python.org", 42),
+            ),
+        ]
+        for uri, authority in cases:
+            parts = urisplit(uri)
+            self.assertEqual(parts.getauthority(default, encoding=None), authority)
+            parts = urisplit(uri.encode())
+            self.assertEqual(parts.getauthority(default, encoding=None), authority)
+
     def test_gethost(self):
         from ipaddress import IPv4Address, IPv6Address
 
