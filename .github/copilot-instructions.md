@@ -1,90 +1,128 @@
-# uritools Project Guidelines
+# Copilot Instructions for uritools
 
-## Overview
+**uritools** provides RFC 3986 compliant URI parsing, classification and composition,
+replacing the most commonly used functions of `urllib.parse`. Pure Python ≥ 3.10, no
+runtime dependencies, type stubs (`__init__.pyi`, `py.typed`). Single maintainer;
+`master` is the release branch, `develop` the integration branch (Dependabot's
+monthly GitHub Actions batch targets it).
 
-RFC 3986 compliant URI parsing library replacing Python's `urllib.parse`. Requires Python >= 3.10, zero runtime dependencies.
+## Ground Rules
 
-- **Single-file design**: Everything in `src/uritools/__init__.py` — do not create submodules
-- **Dual type support**: All public functions handle both `str` and `bytes` via `SplitResultString` / `SplitResultBytes`
-- **Public API**: Defined in `__all__` — changes are breaking
-- **Type stubs**: `src/uritools/__init__.pyi` — keep in sync with runtime API
-- **Version**: `__version__` in `src/uritools/__init__.py` is the single source (read by `pyproject.toml` and `docs/conf.py`)
-- **Supported Pythons**: CI runs CPython 3.10–3.14 (including free-threaded `3.13t`/`3.14t`) and PyPy 3.10/3.11; add a `pyproject.toml` classifier when adding a version
+- **Run everything through `tox`** (`tox -e <env> -- <posargs>`), never bare `pytest`,
+  `ruff` or `pyright`. Without `tox`, use `PYTHONPATH=src python3 -m pytest tests/` so
+  the workspace source is tested, not an installed package.
+- **Do not edit `CHANGELOG.rst` or bump `__version__`**; both are release-only
+  (`Prepare vX.Y.Z` / `Release vX.Y.Z` commits). `__version__` in
+  `src/uritools/__init__.py` is the single source, read by `pyproject.toml` and
+  `docs/conf.py`.
+- **Single-file design**: everything lives in `src/uritools/__init__.py`; do not create
+  submodules. Apply changes to **both** the `str` and `bytes` variants.
+- **Public API is `__all__`**; changes are breaking. Keep `__init__.pyi` in sync with
+  the runtime API.
+- New behavior needs tests under `tests/`; user-visible features need docs in
+  `docs/index.rst` (doctested). Keep `README.rst` examples in sync with it; they are
+  valid doctests but no `tox` environment runs them, so check them with
+  `PYTHONPATH=src python3 -m doctest README.rst`.
+- Docs style: wrap prose paragraphs in `docs/index.rst` at column 70 (tables, code
+  examples, directive signatures, titles and link targets excepted); two spaces after
+  a sentence; directive body content indented 3 spaces; single backticks for
+  parameters and `:func:`/`:class:`/`:attr:`/`:const:`/`:mod:` roles in
+  `docs/index.rst`, ``double backticks`` in `CHANGELOG.rst`, whose entries are
+  imperative one-liners ending with a period, tagged "(breaking change)" where
+  applicable; docs-only work is one "Minor documentation improvements." line,
+  tooling one "Update build environment." line; two blank lines between releases.
+- Docstrings describe types in prose; no type annotations in `.py` files.
+- Prefer clarity over cleverness; this is a hot-path parsing library, so keep
+  `urisplit()`/`uriencode()` free of avoidable Python-level calls.
+- This file stays at most 150 lines; when adding, drop details the code already shows.
 
 ## Architecture
 
-Functions return `namedtuple` subclasses (`SplitResult`, `DefragResult`) with both tuple access and getter methods (`.gethost()`, `.getport()`, `.getquerydict()`). Preserve both interfaces when modifying.
+**Parsing** (`urisplit()`, `uridefrag()`): type dispatch on the input selects
+`SplitResultString` or `SplitResultBytes`, `namedtuple` subclasses of `SplitResult`
+that differ only in their regex and delimiter constants (`_COLON`, `_SLASH`, ...).
+`SplitResult._RE` is the RFC 3986 Appendix B regex; every group is optional, so it
+matches any input. `userinfo`, `host` and `port` are properties derived from
+`authority`, not tuple fields. `get*()` methods decode via `uridecode()` and return
+`str` unless `encoding=None`; `getscheme()` lowercases and always returns `str`;
+`gethost()` returns an `ipaddress` object for IP literals (IPvFuture, addresses
+starting with `v`, raises `ValueError`) and a lowercased string otherwise;
+`getport()` returns `int` or `default` for a missing or empty port. `transform()`
+implements RFC 3986 5.2 (`urijoin()`); `__remove_dot_segments()` and `__merge()` are
+name-mangled helpers. Preserve both tuple access and getter methods.
 
-Encoding uses cached lookup tables (`_encoded` dict) with uppercase hex digits per RFC 3986. Safe characters vary by component (`_SAFE_PATH`, `_SAFE_QUERY`, etc.).
+**Encoding** (`uriencode()`, `uridecode()`): byte-to-bytes lookup tables with uppercase
+hex digits per RFC 3986 2.1; `_encoded` caches one table per `safe` value (unbounded,
+*Maintainer Decisions*). Safe characters vary by component (`_SAFE_PATH`,
+`_SAFE_QUERY`, ...). `uridecode(encoding=None)` returns `bytes`.
 
-Type dispatch pattern used throughout:
-```python
-if isinstance(uristring, bytes):
-    result = SplitResultBytes
-else:
-    result = SplitResultString
-```
+**Composition** (`uricompose()`): all components become `bytes`, the result is `str`.
+Scheme `[A-Za-z][A-Za-z0-9+.-]*`, lowercased; `authority` is a string or a three-item
+sequence, overridden per subcomponent by `userinfo`/`host`/`port` kwargs; invalid
+`host`/`authority`/`query` types raise `TypeError`, never a leaked `AttributeError`.
+Hosts are lowercased, IPv6 addresses bracketed and compressed (`[2001:db8::1]`). A
+path with an authority must be empty or start with `/`, without one must not start
+with `//`; a relative path whose first segment contains `:` gets a `./` prefix.
+`query` accepts `str`, `bytes`, a mapping or an iterable of pairs, joined by
+`querysep`.
 
-### Composition rules (`uricompose()`)
-- Scheme: `[A-Za-z][A-Za-z0-9+.-]*`, lowercased
-- Path with authority must start with `/` or be empty
-- Path without authority cannot start with `//`
-- Relative paths with `:` in first segment get `./` prefix
-- Query accepts `str`, `bytes`, `dict`, or list of tuples
-- Invalid host types must raise `TypeError`, not leak `AttributeError`
+## Type Stubs (`__init__.pyi`)
 
-### IP address handling
-- Use `ipaddress` module; reject IPvFuture (addresses starting with `v`)
-- IPv6 bracketed in output: `[2001:db8::1]`, always compressed form
+`SplitResult` and `DefragResult` are `Generic[AnyStr]` `NamedTuple`s. `get*()`
+methods carry `@overload`s with `str` first (`encoding: str = ...`) and a
+keyword-only `encoding: None` variant returning `bytes`; `getscheme()` and
+`gethost()` have none, they always return `str`/`ipaddress` objects. `urijoin()`
+mixed-type overloads return `str`. pyright runs in `standard` mode;
+`reportOptionalMemberAccess` is a warning on purpose: the `re.match(...).groups()`
+warnings are expected, do not add guards just to silence them. Only errors fail.
 
-### Design decisions (intentional — do not "fix")
-- The `_encoded` cache may grow unbounded for arbitrary `safe` values — a known, low-impact trade-off
-- `getfragment()` and other `get*()` methods decode to `str` by default, even for bytes input
-- `getscheme()` always returns `str` (decodes bytes schemes); the FIXME in the source is resolved-by-design
-- `getauthority()` calls three separate getters; the TODO about a dedicated regex is a micro-optimization, not a bug
-- `gethost()` returns `""` for empty host when `default=None`, but returns `default` when it's not None
-- `SplitResultBytes` / `SplitResultString` are semi-private (not in `__all__`); the `# TODO: make private?` comments stay as-is, since renaming would break direct importers
-- An empty port (`http://host:`) matches as `""`, not `None`; `getport()` still returns the default
+## Development and Tests
 
-## Development
-
-### Running checks
 ```bash
-tox              # all environments (recommended)
-tox -e py        # tests with coverage
-tox -e ruff-format  # formatting (ruff format)
-tox -e ruff      # linting (ruff check)
-tox -e pyright   # type checking
-tox -e docs      # Sphinx HTML build
-tox -e doctest   # Sphinx doctest
+tox                                  # all environments
+tox -e py -- tests/test_split.py -k ipv6   # posargs go to pytest
+tox -e ruff,ruff-format,pyright,docs,doctest   # comma-separated environments
 ```
 
-Use `tox` or `PYTHONPATH=src python3 -m pytest tests/` to test against the workspace source (not the system-installed package).
+- CI (`.github/workflows/ci.yml`, every push and PR) runs `tox` on CPython 3.10–3.14,
+  free-threaded 3.13t/3.14t and PyPy 3.10/3.11 and uploads coverage to Codecov. Add a
+  `pyproject.toml` classifier when adding a Python version. Actions are pinned by
+  commit SHA with a `# vX.Y.Z` comment; keep both in sync. Without `gh`, check runs
+  via `https://api.github.com/repos/tkem-ai/uritools/actions/runs?branch=<branch>`.
+- `tox -e docs` and `tox -e doctest` run Sphinx with `-W` and fetch the Python
+  intersphinx inventory, so they need network access.
+- Tests are `unittest.TestCase` classes with `check()` helpers, one module per
+  function (`test_split.py`, `test_compose.py`, ...); not pytest-style. Every case
+  has a `str` and a `bytes` variant. RFC 3986 examples live in `test_rfc3986*()`
+  methods, edge cases in `test_abnormal()`. Keep 100% line coverage. Do not shadow
+  built-ins (`dict`, `input`) in loop variables.
 
-- `pyright` must report 0 errors; its `reportOptionalMemberAccess` warnings on `re.match(...).groups()` are expected (set to `warning` in `pyproject.toml`) — do not add guards just to silence them
-- `tox -e docs` and `tox -e doctest` fetch the Python intersphinx inventory and run Sphinx with `-W`, so they need network access
-- `README.rst` doctests are not run by `tox`; check them with `PYTHONPATH=src python3 -m doctest README.rst`
+## Code Review
 
-### Testing conventions
-- `unittest.TestCase` with `check()` helpers — not pytest-style
-- Test both `str` and `bytes` variants of every case
-- Test RFC 3986 examples explicitly in `test_rfc3986()` methods
-- Edge cases in separate `test_abnormal()` methods
-- Maintain 100% line coverage
-- Avoid shadowing built-ins (`dict`, `input`) in loop variables
+- Reviews **amend `.github/copilot-review.md` in place** (header: date, commit, CI
+  status, coverage, one *Verified* paragraph); never new files, dated sections or a
+  per-commit change summary (git history is the record).
+- Findings are tables ordered High, Medium, Low, Info with columns
+  `# | Priority | Location | Finding`; renumber after changes; cross-reference as
+  "Code #3". **Resolved issues are removed**, never marked resolved.
+- Keep it brief: one or two sentences per row, numbers only where they decide
+  something, current snapshot only (no comparisons with earlier releases). Record
+  settled matters under *Maintainer Decisions*. A review changes nothing; fix only
+  when asked.
 
-### Documentation
-- Sphinx docs in `docs/`, built with `tox -e docs`
-- `README.rst` examples must work as doctests (verify manually, see above)
-- Docstrings describe types in prose (no type annotations in signatures)
-- Directive body content uses 3-space indentation in `docs/index.rst`
+## Maintainer Decisions (do not re-raise)
 
-### Branches and CI
-- `develop` is the integration branch; Dependabot (GitHub Actions, monthly batch) targets `develop`, not `master`
-- `master` carries releases (`Release vX.Y.Z` commits) and is merged from `develop`
-- `.github/workflows/ci.yml` runs `tox` on every push/PR and uploads coverage to Codecov; actions are pinned by commit SHA with a `# vX.Y.Z` comment — keep both in sync when bumping
-
-### Changelog
-- `CHANGELOG.rst` uses `vX.Y.Z (YYYY-MM-DD)` headers with `===` underlines
-- Unreleased changes go under `vX.Y.Z (UNRELEASED)`
-- Each entry is a `- ` bullet (imperative mood, no trailing period)
+- `getscheme()`, `getfragment()` and all other `get*()` methods decode to `str` by
+  default, even for `bytes` input; the FIXMEs in the source are resolved-by-design.
+- `gethost()` returns `""` for an empty host when `default=None`, but `default`
+  otherwise; tested and documented.
+- An empty port (`http://host:`) matches as `""`, not `None`; `getport()` still
+  returns the default.
+- `_encoded` may grow unbounded for arbitrary `safe` values; known, low-impact.
+- `getauthority()` calls three separate getters; the TODO about a dedicated regex is
+  a micro-optimization, not a bug.
+- `SplitResultBytes` / `SplitResultString` stay semi-private (absent from `__all__`,
+  no leading underscore); renaming would break direct importers. The
+  `# TODO: make private?` comments stay.
+- Feature requests are not accepted (`.github/ISSUE_TEMPLATE/feature_request.md`);
+  bug reports require the latest release.
