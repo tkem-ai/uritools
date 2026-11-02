@@ -283,9 +283,31 @@ class SplitTest(unittest.TestCase):
                 ("nobody", "localhost", 42),
                 ("userinfo", "test.python.org", 5432),
             ),
+            (
+                "urn:example:animal:ferret:nose",
+                (b"nobody", b"localhost", 42),
+                (b"nobody", b"localhost", 42),
+            ),
+            ("file:///", (b"nobody", b"localhost", 42), (b"nobody", b"localhost", 42)),
+            (
+                "http://Test.python.org/foo/",
+                (b"nobody", b"localhost", 42),
+                (b"nobody", "test.python.org", 42),
+            ),
+            (
+                "http://@Test.python.org:5432/foo/",
+                (b"nobody", b"localhost", 42),
+                ("", "test.python.org", 5432),
+            ),
+            (
+                "http://userinfo@Test.python.org:5432/foo/",
+                (b"nobody", b"localhost", 42),
+                ("userinfo", "test.python.org", 5432),
+            ),
         ]
         for uri, default, authority in cases:
             self.assertEqual(urisplit(uri).getauthority(default), authority)
+            self.assertEqual(urisplit(uri.encode()).getauthority(default), authority)
         for uri in ["http://[::1/", "http://::1]/"]:
             with self.assertRaises(ValueError, msg="%r" % uri):
                 urisplit(uri).getauthority()
