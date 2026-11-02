@@ -42,6 +42,20 @@ class DefragTest(unittest.TestCase):
         self.assertEqual(uridefrag("#foo%20bar").getfragment(), "foo bar")
         self.assertEqual(uridefrag(b"#foo%20bar").getfragment(), "foo bar")
 
+    def test_getfragment_default(self):
+        self.assertEqual(uridefrag("").getfragment("fallback"), "fallback")
+        self.assertEqual(uridefrag(b"").getfragment("fallback"), "fallback")
+        self.assertEqual(uridefrag("").getfragment(default="fallback"), "fallback")
+        self.assertEqual(uridefrag(b"").getfragment(default="fallback"), "fallback")
+        self.assertEqual(uridefrag("#").getfragment("fallback"), "")
+        self.assertEqual(uridefrag(b"#").getfragment("fallback"), "")
+        self.assertEqual(uridefrag("#foo").getfragment("fallback"), "foo")
+        self.assertEqual(uridefrag(b"#foo").getfragment("fallback"), "foo")
+        self.assertEqual(uridefrag("").getfragment(b"fb", encoding=None), b"fb")
+        self.assertEqual(uridefrag(b"").getfragment(b"fb", encoding=None), b"fb")
+        self.assertEqual(uridefrag("#foo").getfragment(b"fb", encoding=None), b"foo")
+        self.assertEqual(uridefrag(b"#foo").getfragment(b"fb", encoding=None), b"foo")
+
     def test_getfragment_encoding_none(self):
         self.assertEqual(uridefrag("").getfragment(encoding=None), None)
         self.assertEqual(uridefrag(b"").getfragment(encoding=None), None)
