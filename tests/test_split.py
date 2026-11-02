@@ -283,9 +283,31 @@ class SplitTest(unittest.TestCase):
                 ("nobody", "localhost", 42),
                 ("userinfo", "test.python.org", 5432),
             ),
+            (
+                "urn:example:animal:ferret:nose",
+                (b"nobody", b"localhost", 42),
+                (b"nobody", b"localhost", 42),
+            ),
+            ("file:///", (b"nobody", b"localhost", 42), (b"nobody", b"localhost", 42)),
+            (
+                "http://Test.python.org/foo/",
+                (b"nobody", b"localhost", 42),
+                (b"nobody", "test.python.org", 42),
+            ),
+            (
+                "http://@Test.python.org:5432/foo/",
+                (b"nobody", b"localhost", 42),
+                ("", "test.python.org", 5432),
+            ),
+            (
+                "http://userinfo@Test.python.org:5432/foo/",
+                (b"nobody", b"localhost", 42),
+                ("userinfo", "test.python.org", 5432),
+            ),
         ]
         for uri, default, authority in cases:
             self.assertEqual(urisplit(uri).getauthority(default), authority)
+            self.assertEqual(urisplit(uri.encode()).getauthority(default), authority)
         for uri in ["http://[::1/", "http://::1]/"]:
             with self.assertRaises(ValueError, msg="%r" % uri):
                 urisplit(uri).getauthority()
@@ -295,35 +317,6 @@ class SplitTest(unittest.TestCase):
             urisplit("").getauthority(42)  # type: ignore
         with self.assertRaises(ValueError):
             urisplit("").getauthority(("userinfo", "test.python.org"))  # type: ignore
-
-    def test_getauthority_bytes_default(self):
-        default = (b"nobody", b"localhost", 42)
-        cases = [
-            ("urn:example:animal:ferret:nose", (b"nobody", b"localhost", 42)),
-            ("file:///", (b"nobody", b"localhost", 42)),
-            ("http://Test.python.org/foo/", (b"nobody", "test.python.org", 42)),
-            ("http://@Test.python.org:5432/foo/", ("", "test.python.org", 5432)),
-            (
-                "http://userinfo@Test.python.org:5432/foo/",
-                ("userinfo", "test.python.org", 5432),
-            ),
-        ]
-        for uri, authority in cases:
-            self.assertEqual(urisplit(uri).getauthority(default), authority)
-            self.assertEqual(urisplit(uri.encode()).getauthority(default), authority)
-        # with encoding=None, a present userinfo is returned as bytes
-        cases = [
-            ("urn:example:animal:ferret:nose", (b"nobody", b"localhost", 42)),
-            (
-                "http://userinfo@Test.python.org/foo/",
-                (b"userinfo", "test.python.org", 42),
-            ),
-        ]
-        for uri, authority in cases:
-            parts = urisplit(uri)
-            self.assertEqual(parts.getauthority(default, encoding=None), authority)
-            parts = urisplit(uri.encode())
-            self.assertEqual(parts.getauthority(default, encoding=None), authority)
 
     def test_gethost(self):
         from ipaddress import IPv4Address, IPv6Address
@@ -625,6 +618,10 @@ class SplitTest(unittest.TestCase):
 
     def test_encoding_none_defaults(self):
         parts = urisplit("")
+        self.assertEqual(
+            parts.getauthority((b"nobody", b"localhost", 42), encoding=None),
+            (b"nobody", b"localhost", 42),
+        )
         self.assertEqual(parts.getuserinfo(encoding=None), None)
         self.assertEqual(parts.getquery(encoding=None), None)
         self.assertEqual(parts.getfragment(encoding=None), None)
