@@ -1,7 +1,8 @@
-# Code Review — uritools 6.1.1
+# Code Review — uritools 6.1.3
 
-**Date:** 2026-05-18  
-**CI status:** All green (tox: py, ruff, ruff-format, pyright, docs, doctest)
+**Date:** 2026-10-29  
+**CI status:** All green (tox: py, ruff, ruff-format, pyright, docs, doctest)  
+**Verified:** 45 tests, 394 statements, 100% line coverage; `pyright` 0 errors (4 `reportOptionalMemberAccess` warnings, see Code #4–#5); `README.rst` doctests pass; GitHub Actions green on `master` and `develop` (2026-10-27)
 
 ## Type Stubs (`__init__.pyi`)
 
@@ -18,8 +19,10 @@ return `str` (decoding bytes when needed), and type stubs reflect this.
 | 1 | Low | `uriencode()` `_encoded` dict | Cache grows without limit when callers pass arbitrary `safe` values. FIXME at line 79 acknowledges this. Consider `@functools.lru_cache` or dict size cap. |
 | 2 | Info | `gethost()` default behavior | Returns `""` when host is empty and `default=None`, but returns `default` when default is not None. Edge case (`"file:///"` → `gethost()` returns `""`) is tested and documented; intentional. |
 | 3 | Info | `_AUTHORITY_RE_*` port group | Regex `(?::([0-9]*))?$` captures empty port string for URIs like `http://host:`. Handled correctly downstream (`getport()` returns default for empty port). No bug. |
+| 4 | Low | `uricompose()` `authority` with newline (lines 758, 760) | `_AUTHORITY_RE_*` use `.` without `re.DOTALL`, so `uricompose(authority="foo\nbar")` makes `match()` return `None` and leaks `AttributeError: 'NoneType' object has no attribute 'groups'` instead of `ValueError`. Same class of issue as the host `TypeError` rule in `copilot-instructions.md`. Fix: raise `ValueError("Invalid authority component")` when the match fails, or use `re.fullmatch` with `(?s)`. |
+| 5 | Info | `re.match(...).groups()` in `urisplit()` (line 557) | `pyright` warns that `match()` may return `None`. `SplitResult._RE` is not end-anchored and every group is optional, so it matches any input (newlines included); `None` is unreachable here. `reportOptionalMemberAccess` is deliberately set to `warning` in `pyproject.toml`; no guard needed. |
 
-No implementation bugs found.
+No implementation bugs found beyond the low-severity `AttributeError` leak in Code #4.
 
 ## Code — Design Notes
 
@@ -55,3 +58,5 @@ require action; the FIXME/TODO comments they refer to are kept deliberately.
 | 3 | Low | `master_doc` deprecated | Deprecated in Sphinx 4.0+ in favor of `root_doc`. Works fine currently but will eventually warn. |
 | 4 | Info | `DefragResult` / `SplitResult` duplication | Documented twice: inline attribute tables in "URI Decomposition" + `.. autoclass::` in "Structured Parse Results". Provides best reference coverage. |
 | 5 | Info | Changelog format | Documented in `copilot-instructions.md` (imperative mood bullets, `vX.Y.Z (YYYY-MM-DD)` headers with `===`). No separate `CONTRIBUTING.md`, but guidance is clear. |
+| 6 | Low | `README.rst` doctests not run by CI | The README examples are valid doctests (`python -m doctest README.rst` passes), but `README.rst` is not included from `docs/index.rst`, so neither `tox -e doctest` nor `tox -e py` executes them. Consider adding `--doctest-glob=README.rst` to the pytest command in `tox.ini`. |
+| 7 | Info | `tox -e docs` / `tox -e doctest` need network | `sphinx.ext.intersphinx` fetches `https://docs.python.org/3/objects.inv`; with `-W`, an unreachable inventory fails the build offline. Not a repository defect. |
