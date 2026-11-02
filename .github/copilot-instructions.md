@@ -8,6 +8,8 @@ RFC 3986 compliant URI parsing library replacing Python's `urllib.parse`. Requir
 - **Dual type support**: All public functions handle both `str` and `bytes` via `SplitResultString` / `SplitResultBytes`
 - **Public API**: Defined in `__all__` — changes are breaking
 - **Type stubs**: `src/uritools/__init__.pyi` — keep in sync with runtime API
+- **Version**: `__version__` in `src/uritools/__init__.py` is the single source (read by `pyproject.toml` and `docs/conf.py`)
+- **Supported Pythons**: CI runs CPython 3.10–3.14 (including free-threaded `3.13t`/`3.14t`) and PyPy 3.10/3.11; add a `pyproject.toml` classifier when adding a version
 
 ## Architecture
 
@@ -59,6 +61,10 @@ tox -e doctest   # Sphinx doctest
 
 Use `tox` or `PYTHONPATH=src python3 -m pytest tests/` to test against the workspace source (not the system-installed package).
 
+- `pyright` must report 0 errors; its `reportOptionalMemberAccess` warnings on `re.match(...).groups()` are expected (set to `warning` in `pyproject.toml`) — do not add guards just to silence them
+- `tox -e docs` and `tox -e doctest` fetch the Python intersphinx inventory and run Sphinx with `-W`, so they need network access
+- `README.rst` doctests are not run by `tox`; check them with `PYTHONPATH=src python3 -m doctest README.rst`
+
 ### Testing conventions
 - `unittest.TestCase` with `check()` helpers — not pytest-style
 - Test both `str` and `bytes` variants of every case
@@ -69,9 +75,14 @@ Use `tox` or `PYTHONPATH=src python3 -m pytest tests/` to test against the works
 
 ### Documentation
 - Sphinx docs in `docs/`, built with `tox -e docs`
-- `README.rst` examples must work as doctests
+- `README.rst` examples must work as doctests (verify manually, see above)
 - Docstrings describe types in prose (no type annotations in signatures)
 - Directive body content uses 3-space indentation in `docs/index.rst`
+
+### Branches and CI
+- `develop` is the integration branch; Dependabot (GitHub Actions, monthly batch) targets `develop`, not `master`
+- `master` carries releases (`Release vX.Y.Z` commits) and is merged from `develop`
+- `.github/workflows/ci.yml` runs `tox` on every push/PR and uploads coverage to Codecov; actions are pinned by commit SHA with a `# vX.Y.Z` comment — keep both in sync when bumping
 
 ### Changelog
 - `CHANGELOG.rst` uses `vX.Y.Z (YYYY-MM-DD)` headers with `===` underlines
