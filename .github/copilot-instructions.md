@@ -16,9 +16,9 @@ PYTHONPATH=src python3 -m doctest README.rst     # README examples; tox does not
 ```
 
 Green means: all tests pass, 100% line and branch coverage, `ruff` clean, `pyright` 0
-errors and 0 warnings. `reportAttributeAccessIssue` (per-subclass constants such as
-`_SLASH`) and `reportOptionalMemberAccess` (`re.match(...).groups()`) are off by a
-file-level `# pyright:` comment in `__init__.py`; no guards. Unused ignores are errors.
+errors and 0 warnings. `SplitResult` declares the per-subclass constants (`_SLASH`, ...)
+as `ClassVar[Any]`; the two `fullmatch(...).groups()` calls in `uricompose()` carry a
+scoped `# pyright: ignore[rule]`; no guards, no file-level pragma. Unused ignores error.
 
 ## Code style
 
@@ -31,9 +31,9 @@ else:
     result = SplitResultString
 ```
 
-No type annotations in `.py` files; types live in `__init__.pyi` (`str` overloads
-before the keyword-only `encoding: None` ones). Tests passing deliberately invalid
-types end the line with `# type: ignore`. Docstrings name types in prose:
+No annotations on functions in `.py` files; types live in `__init__.pyi` (`str`
+overloads before the keyword-only `encoding: None` ones). Tests passing deliberately
+invalid types end the line with `# type: ignore`. Docstrings name types in prose:
 
 ```python
 """Return the port subcomponent of the URI authority as an

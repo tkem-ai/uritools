@@ -6,14 +6,13 @@ commonly used functions of the Python Standard Library
 
 """
 
-# pyright: reportAttributeAccessIssue=false, reportOptionalMemberAccess=false
-
 import collections
 import collections.abc
 import ipaddress
 import numbers
 import re
 from string import hexdigits
+from typing import Any, ClassVar
 
 __all__ = (
     "GEN_DELIMS",
@@ -142,6 +141,25 @@ class SplitResult(
     """Base class to hold :func:`urisplit` results."""
 
     __slots__ = ()  # prevent creation of instance dictionary
+
+    # regex and delimiter constants, defined by SplitResultBytes / SplitResultString
+    _RE: ClassVar[re.Pattern[Any]]
+    _COLON: ClassVar[Any]
+    _SLASH: ClassVar[Any]
+    _QUEST: ClassVar[Any]
+    _HASH: ClassVar[Any]
+    _LBRACKET: ClassVar[Any]
+    _RBRACKET: ClassVar[Any]
+    _AT: ClassVar[Any]
+    _DOT: ClassVar[Any]
+    _DOTDOT: ClassVar[Any]
+    _EMPTY: ClassVar[Any]
+    _EQ: ClassVar[Any]
+    _DIGITS: ClassVar[Any]
+
+    @classmethod
+    def _match(cls, ref):
+        return cls._RE.match(ref)
 
     @property
     def userinfo(self):
@@ -474,10 +492,6 @@ class SplitResultBytes(SplitResult):
         flags=re.VERBOSE | re.DOTALL,
     )
 
-    @classmethod
-    def _match(cls, ref):
-        return cls._RE.match(ref)
-
     # RFC 3986 2.2 gen-delims
     _COLON, _SLASH, _QUEST, _HASH, _LBRACKET, _RBRACKET, _AT = (
         b":",
@@ -512,10 +526,6 @@ class SplitResultString(SplitResult):
     """,
         flags=re.VERBOSE | re.DOTALL,
     )
-
-    @classmethod
-    def _match(cls, ref):
-        return cls._RE.match(ref)
 
     # RFC 3986 2.2 gen-delims
     _COLON, _SLASH, _QUEST, _HASH, _LBRACKET, _RBRACKET, _AT = (
@@ -757,9 +767,9 @@ def uricompose(
     if authority is None:
         authority = (None, None, None)
     elif isinstance(authority, bytes):
-        authority = _AUTHORITY_RE_BYTES.fullmatch(authority).groups()
+        authority = _AUTHORITY_RE_BYTES.fullmatch(authority).groups()  # pyright: ignore[reportOptionalMemberAccess]
     elif isinstance(authority, str):
-        authority = _AUTHORITY_RE_STR.fullmatch(authority).groups()
+        authority = _AUTHORITY_RE_STR.fullmatch(authority).groups()  # pyright: ignore[reportOptionalMemberAccess]
     elif not isinstance(authority, collections.abc.Sequence):
         raise TypeError("Invalid authority type")
     elif len(authority) != 3:

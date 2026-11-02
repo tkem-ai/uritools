@@ -13,7 +13,7 @@ for `develop` at `905d4a6` (run 25) on all eleven matrix jobs (CPython 3.10–3.
 3.13t–3.15t, PyPy 3.10–3.11), each running the full `tox` envlist including `docs`
 and `doctest`.
 
-**Coverage:** 100% line and branch coverage of `src/uritools/__init__.py` (394
+**Coverage:** 100% line and branch coverage of `src/uritools/__init__.py` (405
 statements, 186 branches).
 
 **Verified:** All nine `type: ignore` comments, all in `tests/`, are needed: with
@@ -39,11 +39,11 @@ return `str` (decoding bytes when needed), and type stubs reflect this.
 
 | # | Priority | Location | Finding |
 |---|----------|----------|---------|
-| 1 | Info | `uriencode()` `_encoded` dict (lines 64, 81) | Cache grows without limit when callers pass arbitrary `safe` values; the FIXME acknowledges this. Decided in `copilot-instructions.md` *Boundaries*; no change. |
-| 2 | Info | `gethost()` default behavior (line 245) | Returns `""` when host is empty and `default=None`, but returns `default` when default is not None. Edge case (`"file:///"` → `gethost()` returns `""`) is tested and documented; intentional. |
+| 1 | Info | `uriencode()` `_encoded` dict (lines 63, 80) | Cache grows without limit when callers pass arbitrary `safe` values; the FIXME acknowledges this. Decided in `copilot-instructions.md` *Boundaries*; no change. |
+| 2 | Info | `gethost()` default behavior (line 263) | Returns `""` when host is empty and `default=None`, but returns `default` when default is not None. Edge case (`"file:///"` → `gethost()` returns `""`) is tested and documented; intentional. |
 | 3 | Info | `_AUTHORITY_RE_*` port group | Regex `(?::([0-9]*))?` captures empty port string for URIs like `http://host:`. Handled correctly downstream (`getport()` returns default for empty port). No bug. |
-| 4 | Info | `match(...).groups()` in `urisplit()` (line 559), `fullmatch(...).groups()` in `uricompose()` (lines 760, 762) | `pyright` would report that the match may be `None`. `SplitResult._RE` is not end-anchored and every group is optional; the `_AUTHORITY_RE_*` groups are optional and `(.*?)` with `re.DOTALL` absorbs any remainder, so all three always match. No guard needed; the rule is off (Code #5). |
-| 5 | Info | `# pyright: reportAttributeAccessIssue=false, reportOptionalMemberAccess=false` (line 9) | Documented in `copilot-instructions.md`. Trade-off: unlike the former `pyproject.toml` downgrades, both rules are off for the whole module, so an attribute typo such as `self._SLAHS` is no longer reported; tests catch it only on a covered path. |
+| 4 | Info | `match(...).groups()` in `urisplit()` (line 569), `fullmatch(...).groups()` in `uricompose()` (lines 770, 772) | `pyright` reports that the match may be `None` at the two `uricompose()` sites, each silenced by a scoped `# pyright: ignore[reportOptionalMemberAccess]`; `urisplit()` goes through the unannotated `_match()` and needs none. `SplitResult._RE` is not end-anchored and every group is optional; the `_AUTHORITY_RE_*` groups are optional and `(.*?)` with `re.DOTALL` absorbs any remainder, so all three always match. No guard needed. |
+| 5 | Info | `SplitResult` class-level declarations (lines 146–158) | `ClassVar[Any]` rather than `str \| bytes`: a union fails `startswith()` and `join()` argument checks, and would type `uriunsplit()` as `str`, breaking the `.decode()` in `uricompose()`. The subclass values are the only definitions; the base declarations exist for `pyright`. |
 | 6 | Info | All nine `# type: ignore` (`tests/test_compose.py` lines 76, 124, 126, 136, 138, 233; `tests/test_split.py` lines 295, 297, 319) | Unscoped, as documented in `copilot-instructions.md`: each silences every rule on its line. `# pyright: ignore[<rule>]` would keep other rules live if that convention changes. |
 
 No implementation bugs found.
