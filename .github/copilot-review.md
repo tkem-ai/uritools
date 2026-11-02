@@ -1,16 +1,17 @@
 # Code Review — uritools 6.1.3
 
 **Date:** 2026-11-02
-**Reviewed:** `develop` at `dfe83cf` ("Fix newline handling in uricompose() and
-urisplit().") plus uncommitted `.github/` changes; diverged from `origin/develop`
-at `e6096cf`. `85a3307` ("Ignore typing errors locally.") adds the file-level
-`# pyright:` comment and the `# type:ignore` on `tests/test_split.py:319`. Scope:
+**Reviewed:** `develop` at `905d4a6` ("Update copilot instructions and review.").
+`85a3307` ("Ignore typing errors locally.") adds the file-level `# pyright:`
+comment and the `# type: ignore` on `tests/test_split.py:319`. Scope:
 `type: ignore` comments and `pyright` configuration; other rows carried over.
 
 **CI status:** `tox -e py,ruff,ruff-format,pyright` passes locally on CPython 3.11
 (`py` 45 passed; `pyright` 1.1.414 0 errors, 0 warnings). `8ff6d84` alone fails
-`pyright` (38 errors) until `85a3307`. `docs`, `doctest` and GitHub Actions not
-re-run for this review.
+`pyright` (38 errors) until `85a3307`. GitHub Actions on `tkem-ai/uritools` is green
+for `develop` at `905d4a6` (run 25) on all eleven matrix jobs (CPython 3.10–3.15,
+3.13t–3.15t, PyPy 3.10–3.11), each running the full `tox` envlist including `docs`
+and `doctest`.
 
 **Coverage:** 100% line and branch coverage of `src/uritools/__init__.py` (394
 statements, 186 branches).
@@ -44,7 +45,6 @@ return `str` (decoding bytes when needed), and type stubs reflect this.
 | 4 | Info | `match(...).groups()` in `urisplit()` (line 559), `fullmatch(...).groups()` in `uricompose()` (lines 760, 762) | `pyright` would report that the match may be `None`. `SplitResult._RE` is not end-anchored and every group is optional; the `_AUTHORITY_RE_*` groups are optional and `(.*?)` with `re.DOTALL` absorbs any remainder, so all three always match. No guard needed; the rule is off (Code #5). |
 | 5 | Info | `# pyright: reportAttributeAccessIssue=false, reportOptionalMemberAccess=false` (line 9) | Documented in `copilot-instructions.md`. Trade-off: unlike the former `pyproject.toml` downgrades, both rules are off for the whole module, so an attribute typo such as `self._SLAHS` is no longer reported; tests catch it only on a covered path. |
 | 6 | Info | All ten `# type: ignore` (line 89; `tests/test_compose.py` lines 76, 124, 126, 136, 138, 233; `tests/test_split.py` lines 295, 297, 319) | Unscoped, as documented in `copilot-instructions.md`: each silences every rule on its line. `# pyright: ignore[<rule>]` would keep other rules live if that convention changes. |
-| 7 | Info | `tests/test_split.py:319` | `# type:ignore` lacks the space used by the other nine comments and by `copilot-instructions.md`. |
 
 No implementation bugs found.
 
