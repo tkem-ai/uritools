@@ -211,6 +211,11 @@ convenience methods.
 .. autoclass:: SplitResult
    :members:
 
+   :meth:`transform` expects `ref` to be of the same type as the
+   components of the result, i.e. a string or a :class:`bytes`
+   object; :func:`urijoin` converts mixed `base` and `ref` types
+   itself.
+
 
 Character Constants
 ===================
