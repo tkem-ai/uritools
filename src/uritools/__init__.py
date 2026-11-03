@@ -470,7 +470,7 @@ class SplitResult(
         # not supported".
         if isinstance(address, bytes):
             address = address.decode("ascii")
-        if address.startswith("v"):
+        if address.startswith(("v", "V")):
             raise ValueError("address mechanism not supported")
         return ipaddress.IPv6Address(address)
 
@@ -675,7 +675,7 @@ def _authority(userinfo, host, port, encoding):
 
 
 def _ip_literal(address):
-    if address.startswith("v"):
+    if address.startswith(("v", "V")):
         raise ValueError("Address mechanism not supported")
     else:
         return b"[" + ipaddress.IPv6Address(address).compressed.encode() + b"]"
