@@ -122,6 +122,11 @@ URI Composition
 
 .. autofunction:: uriunsplit
 
+   The type of the returned URI reference is that of the `path`
+   element.  All other elements must be of the same type, or
+   :const:`None`; mixing :class:`str` and :class:`bytes` elements
+   raises :exc:`TypeError`.
+
 
 URI Decomposition
 =================
