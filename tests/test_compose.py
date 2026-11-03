@@ -67,6 +67,7 @@ class ComposeTest(unittest.TestCase):
             ("//a%0Ab@example.com", "a\nb@example.com"),
             ("//a%0Ab@example.com", b"a\nb@example.com"),
             ("//example.com%3A42%0A", "example.com:42\n"),
+            ("//example.com%3A42%0A", b"example.com:42\n"),
         ]
         for uri, authority in cases:
             self.check(uri, authority=authority)
