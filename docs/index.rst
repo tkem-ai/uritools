@@ -187,6 +187,11 @@ URI Encoding
    percent-encodings and decode `uristring` using the codec registered
    for `encoding`, returning a Unicode string.
 
+   `errors` specifies how decoding errors are handled, as for
+   :meth:`bytes.decode`.  A Unicode `uristring` is first encoded as
+   ASCII if `encoding` is :const:`None`, and using `encoding`
+   otherwise, with the same `errors` setting.
+
 .. autofunction:: uriencode
 
    If `uristring` is a :class:`bytes` object, replace any characters
@@ -194,6 +199,12 @@ URI Encoding
    percent-encodings and return the result as a :class:`bytes` object.
    Otherwise, encode `uristring` using the codec registered for
    `encoding` before replacing any percent encodings.
+
+   `safe` specifies additional characters that are left unencoded, as
+   a string of ASCII characters or a :class:`bytes` object, for
+   example ``"/"`` to keep path separators.  `encoding` and `errors`
+   are passed to :meth:`str.encode` when `uristring` is a Unicode
+   string; they are ignored for :class:`bytes` input.
 
 
 Structured Parse Results
