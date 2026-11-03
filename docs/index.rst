@@ -102,6 +102,9 @@ URI Composition
 
    All components may be specified as either Unicode strings, which
    will be encoded according to `encoding`, or :class:`bytes` objects.
+   A `host` given as a Unicode string is always encoded as UTF-8,
+   regardless of `encoding`, as :rfc:`3986#section-3.2.2` requires
+   for non-ASCII registered names.
 
    `authority` may also be passed a three-item sequence specifying
    userinfo, host and port subcomponents.  If both `authority` and any
