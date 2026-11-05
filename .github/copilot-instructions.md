@@ -1,8 +1,8 @@
 # Copilot Instructions for uritools
 
-RFC 3986 URI parsing, classification and composition. Pure Python ≥ 3.10, no runtime
-dependencies, one module (`src/uritools/__init__.py`) plus stubs (`__init__.pyi`).
-Single maintainer; `master` = releases, `develop` = integration and Dependabot target.
+RFC 3986 URI parsing, classification and composition, plus RFC 6570 URI Templates. Pure
+Python ≥ 3.10, no runtime dependencies: `src/uritools/__init__.py` with stubs
+(`__init__.pyi`), and `_template.py` (imported on demand by `uritemplate()`).
 
 ## Commands
 
@@ -80,7 +80,7 @@ Changelog entry (release commits only, subject `Release v6.1.4.`): `- Improve un
 ## Boundaries
 
 - Never edit `CHANGELOG.rst` or `__version__`; both change in release commits only
-- Never add submodules, runtime dependencies, or names to `__all__`
+- Never add submodules (beyond `_template.py`), runtime dependencies, or names to `__all__`
 - Never rename `SplitResultBytes` / `SplitResultString`; semi-private by decision
 - Never "fix" these; they are tested, documented and decided: `getscheme()` and
   `getfragment()` decode `bytes` input to `str`; `gethost()` returns `""` for an empty
@@ -91,7 +91,7 @@ Changelog entry (release commits only, subject `Release v6.1.4.`): `- Improve un
 
 ## Git
 
-- Branch from `develop`, PR to `develop`; `master` receives releases only
+- Branch from `develop` (also Dependabot's target), PR to `develop`; `master` = releases only
 - Commit subject: one imperative sentence ending with a period (`Fix RTD version handling.`)
 - New Python version: add it to the CI matrix and the `pyproject.toml` classifiers
 - Reviews amend `.github/copilot-review.md` in place: header (date, commit, CI, coverage,

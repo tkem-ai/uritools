@@ -30,6 +30,7 @@ __all__ = (
     "uriencode",
     "urijoin",
     "urisplit",
+    "uritemplate",
     "uriunsplit",
 )
 
@@ -837,3 +838,13 @@ def uricompose(
     # return URI reference as `str`
     parts = (scheme, authority, path, query, fragment)
     return uriunsplit(parts).decode()  # type: ignore
+
+
+def uritemplate(template):
+    """Parse an RFC 6570 URI Template string and return a template object
+    that can be expanded with variables.
+
+    """
+    from ._template import URITemplate
+
+    return URITemplate(template)

@@ -27,7 +27,8 @@ the Python Standard Library's ``urllib.parse`` module.
 
 .. code-block:: pycon
 
-    >>> from uritools import uricompose, urijoin, urisplit, uriunsplit
+    >>> from uritools import uricompose, urijoin, urisplit, uritemplate
+    >>> from uritools import uriunsplit
     >>> uricompose(scheme='foo', host='example.com', port=8042,
     ...            path='/over/there', query={'name': 'ferret'},
     ...            fragment='nose')
@@ -47,6 +48,9 @@ the Python Standard Library's ``urllib.parse`` module.
     False
     >>> urijoin(uriunsplit(parts), '/right/here?name=swallow#beak')
     'foo://example.com:8042/right/here?name=swallow#beak'
+    >>> template = uritemplate('foo://example.com{/path*}{?name}')
+    >>> template.expand(path=['over', 'there'], name='ferret')
+    'foo://example.com/over/there?name=ferret'
 
 For various reasons, ``urllib.parse`` is not compliant with current
 Internet standards.  As stated in `Lib/urllib/parse.py
@@ -61,8 +65,8 @@ Internet standards.  As stated in `Lib/urllib/parse.py
 This module aims to provide fully RFC 3986 compliant replacements for
 the most commonly used functions found in ``urllib.parse``.  It also
 includes functions for distinguishing between the different forms of
-URIs and URI references, and for conveniently creating URIs from their
-individual components.
+URIs and URI references, for conveniently creating URIs from their
+individual components, and for expanding RFC 6570 URI Templates.
 
 
 Installation
