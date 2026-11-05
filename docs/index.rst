@@ -45,8 +45,8 @@ Internet standards.  As stated in `Lib/urllib/parse.py
 This module aims to provide fully RFC 3986 compliant replacements for
 the most commonly used functions found in :mod:`urllib.parse`.  It
 also includes functions for distinguishing between the different forms
-of URIs and URI references, and for conveniently creating URIs from
-their individual components.
+of URIs and URI references, for conveniently creating URIs from their
+individual components, and for expanding :rfc:`6570` URI Templates.
 
 .. seealso::
 
@@ -55,6 +55,10 @@ their individual components.
         which any changes to :mod:`uritools` should conform.  If
         deviations are observed, the module's implementation should be
         changed, even if this means breaking backward compatibility.
+
+   :rfc:`6570` - URI Template
+        The Internet standard defining URI Template syntax and
+        expansion, implemented by :func:`uritemplate`.
 
 
 URI Classification
@@ -129,6 +133,53 @@ URI Composition
    element.  All other elements must be of the same type, or
    :const:`None`; mixing :class:`str` and :class:`bytes` elements
    raises :exc:`TypeError`.
+
+
+URI Templates
+=============
+
+.. autofunction:: uritemplate
+
+   `template` is a URI Template as defined in :rfc:`6570`, given as a
+   string or :class:`bytes` object.  All four expression levels are
+   supported, including the prefix (``:n``) and explode (``*``)
+   modifiers.  A malformed template raises :exc:`ValueError`.
+
+   The returned object holds the parsed template and can be expanded
+   any number of times:
+
+   .. doctest::
+
+      >>> from uritools import uritemplate
+      >>> template = uritemplate('{+base}{/user}{/path*}{?q,lang}')
+      >>> template.expand(base='http://example.com', user='fred',
+      ...                 path=['a', 'b'], q='URI Template', lang='en')
+      'http://example.com/fred/a/b?q=URI%20Template&lang=en'
+      >>> template.expand({'base': 'http://example.com', 'q': 'x'})
+      'http://example.com?q=x'
+
+.. class:: URITemplate
+
+   Objects returned by :func:`uritemplate`.  Instances are created by
+   that function only.
+
+   .. attribute:: template
+
+      The template as a string, decoded if :class:`bytes` were given.
+
+   .. method:: expand(variables=None, /, **kwargs)
+
+      Return the URI reference obtained by expanding the template with
+      the given variables, as a string.  Variables are passed as a
+      mapping, as keyword arguments, or both, with keyword arguments
+      taking precedence.
+
+      Variable values may be strings, :class:`bytes` objects or
+      numbers, iterables of these, or mappings with such keys and
+      values.  :const:`None` values and empty collections are treated
+      as undefined.  Strings are encoded as UTF-8 before
+      percent-encoding, as required by :rfc:`6570`.  A value of an
+      unsupported type raises :exc:`TypeError`.
 
 
 URI Decomposition
