@@ -337,6 +337,30 @@ class SplitTest(unittest.TestCase):
             with self.assertRaises(ValueError, msg="%r" % uri):
                 urisplit(uri.encode()).gethost()
 
+    def test_numeric_host(self):
+        # RFC 3986 3.2.2: a registered name may consist of digits only
+        cases = [
+            ("//12345", "12345", None),
+            ("//user@12345", "12345", None),
+            ("//12345/path?query#fragment", "12345", None),
+            ("//12345:", "12345", ""),
+            ("//12345:80", "12345", "80"),
+            ("//user@12345:80", "12345", "80"),
+        ]
+        for uri, host, port in cases:
+            result = urisplit(uri)
+            self.assertEqual(result.host, host)
+            self.assertEqual(result.port, port)
+            self.assertEqual(result.gethost(), host)
+            self.assertEqual(result.getport(), int(port) if port else None)
+            result = urisplit(uri.encode("ascii"))
+            self.assertEqual(result.host, host.encode("ascii"))
+            self.assertEqual(
+                result.port, None if port is None else port.encode("ascii")
+            )
+            self.assertEqual(result.gethost(), host)
+            self.assertEqual(result.getport(), int(port) if port else None)
+
     def test_getport(self):
         for uri in ["foo://bar", "foo://bar:", "foo://bar/", "foo://bar:/"]:
             result = urisplit(uri)
