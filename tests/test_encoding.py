@@ -35,6 +35,17 @@ class EncodingTest(unittest.TestCase):
         for decoded, encoded, safe in cases:
             self.check(decoded, encoded, safe)
 
+    def test_safe_cache(self):
+        # results stay correct for many distinct `safe` values, beyond the
+        # size of the internal per-`safe` lookup table cache
+        unreserved = UNRESERVED.encode("ascii")
+        safes = [bytes([i]) for i in range(1, 256) if bytes([i]) not in unreserved]
+        for safe in safes:
+            self.assertEqual(uriencode(b"\x00" + safe, safe), b"%00" + safe)
+            self.assertEqual(uriencode(b"\x00" + safe), b"%00" + uriencode(safe))
+        for safe in safes:
+            self.assertEqual(uriencode(safe, safe), safe)
+
     def test_utf8_encoding(self):
         cases = [("\xf6lk\xfcrbis", b"%C3%B6lk%C3%BCrbis")]
         for decoded, encoded in cases:
