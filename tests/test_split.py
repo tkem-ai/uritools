@@ -387,6 +387,41 @@ class SplitTest(unittest.TestCase):
             parts = urisplit(("/" + uri).encode("ascii"))
             self.assertEqual(abspath, parts.getpath())
 
+    def test_getpath_encoded(self):
+        cases = [
+            # RFC 3986 2.3: "%2E" is equivalent to "."
+            ("/a/%2E/b", "/a/b"),
+            ("/a/%2E%2E/b", "/b"),
+            ("/a/%2e%2e/b", "/b"),
+            ("/a/.%2E/b", "/b"),
+            ("/a/%2E./b", "/b"),
+            ("/a/%2E/..", "/"),
+            ("%2E%2E/a", "../a"),
+            ("%2E/a", "a"),
+            ("/a%2E%2Eb/%2Ec", "/a..b/.c"),
+            ("/a/%252E%252E/b", "/a/%2E%2E/b"),
+            # RFC 3986 2.2: "%2F" is not a delimiter until it is decoded
+            ("/a%2Fb", "/a/b"),
+            ("/a/b%2Fc/../d", "/a/d"),
+            ("/a/b%2Fc/%2E%2E/d", "/a/d"),
+            ("/a/..%2F..%2Fetc", "/etc"),
+            ("/a/..%2f..%2fetc", "/etc"),
+            ("/a/b%2F..%2Fc", "/a/c"),
+            ("/a/b%2F.", "/a/b/"),
+            ("a/%2E%2E%2F%2E%2E/b", "../b"),
+            (".%2Fa", "a"),
+            # no dot-segments at all
+            ("/foo%20bar", "/foo bar"),
+            ("foo%20bar", "foo bar"),
+        ]
+        for uri, path in cases:
+            parts = urisplit(uri)
+            self.assertEqual(path, parts.getpath())
+            self.assertEqual(path.encode("ascii"), parts.getpath(encoding=None))
+            parts = urisplit(uri.encode("ascii"))
+            self.assertEqual(path, parts.getpath())
+            self.assertEqual(path.encode("ascii"), parts.getpath(encoding=None))
+
     def test_getquery(self):
         cases = [
             ("", [], {}),
