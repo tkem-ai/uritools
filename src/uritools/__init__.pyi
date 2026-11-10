@@ -2,6 +2,8 @@ import ipaddress
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, AnyStr, Generic, NamedTuple, TypeAlias, overload
 
+from ._template import URITemplate
+
 __all__ = (
     "GEN_DELIMS",
     "RESERVED",
@@ -19,6 +21,7 @@ __all__ = (
     "uriencode",
     "urijoin",
     "urisplit",
+    "uritemplate",
     "uriunsplit",
 )
 __version__: str
@@ -240,3 +243,4 @@ def uricompose(
     querysep: str = ...,
     encoding: str = ...,
 ) -> str: ...
+def uritemplate(template: str | bytes) -> URITemplate: ...
