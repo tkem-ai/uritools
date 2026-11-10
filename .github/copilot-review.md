@@ -8,12 +8,12 @@ instructions and review.", tagged `v7.0.0`), plus the review commits on top; loc
 `v7.0.0 (2026-11-08)`; "Exclude AGENTS.md from source distribution.", "Skip dot-segment
 removal in getpath() when the path cannot contain any." and the base commit are unreleased.
 
-**CI status:** `tox -p auto` passes on CPython 3.14.4, the only interpreter on this
-machine (`py`: 54 passed, including `README.rst` and `docs/index.rst` doctests; `pyright`
-1.1.414 0 errors, 0 warnings; Sphinx 9.2.0 `-W` clean). GitHub Actions has no run for
-the base commit itself; the latest `develop` run (the previous review commit, same `src/`
-and `tests/`) is green on all nine matrix jobs. 3.11–3.13, 3.15, the free-threaded
-builds and PyPy were not run locally.
+**CI status:** `tox -p auto` passes on CPython 3.13.17 (`py`: 54 passed, including
+`README.rst` and `docs/index.rst` doctests; `pyright` 1.1.414 0 errors, 0 warnings;
+Sphinx 9.2.0 `-W` clean); `py` also passes on 3.11.17 and 3.12.3. GitHub Actions has no
+run for the base commit itself; the latest `develop` run (the previous review commit,
+same `src/` and `tests/`) is green on all nine matrix jobs. 3.14, 3.15, the
+free-threaded builds and PyPy were not run locally.
 **Coverage:** 100% line and branch (`src/uritools/__init__.py`).
 
 ## Code — Potential Issues
@@ -25,9 +25,10 @@ paths up to seven, `str` and `bytes`).
 | # | Priority | Location | Finding |
 |---|----------|----------|---------|
 | 1 | Low | `getpath()` (lines 300–307) | Percent-encoded dot-segments survive normalization: `urisplit("/a/%2E%2E/b").getpath()` returns `/a/../b` (`str` and `bytes`), because dot-segments are removed before decoding. RFC 3986 2.3 makes `%2E` equivalent to `.`, so a caller that maps the "normalized" path onto a file system gets a traversal. Treating `%2e`/`%2E` as `.` in the segment test (and in the fast-path guard) closes it; no test covers the case. |
-| 2 | Low | `uridecode()` (line 95), `uridefrag()` (568), `urijoin()` (609), `getquerylist()` (345) | A wrong type still leaks `AttributeError`: `uridecode(42)`, `uridecode(None)`, `uridefrag(42)`, `urijoin("http://a/", 42)` and `getquerylist(sep=42)` all do, while 7.0.0 made `uriencode()` and `uricompose()` raise `TypeError` and `urisplit(42)` raises `TypeError` from `re`. The same `isinstance(..., str)` / `elif not bytes: raise TypeError` pattern as `uriencode()` would finish the job. |
-| 3 | Low | `_ip_literal()` (705–709), `_authority()` (683), `__parse_ip_literal()` (490) | Scoped IPv6 addresses pass through `ipaddress` unchecked. `uricompose(host=ipaddress.IPv6Address("fe80::1%eth0"))` and `host="fe80::1%eth0"` return `//[fe80::1%eth0]`, which is not a URI: RFC 3986 3.2.2 `IPv6address` has no zone and `%et` is not `pct-encoded`. `urisplit("//[fe80::1%25eth0]").gethost()` returns an address with `scope_id == "25eth0"`. Rejecting a `scope_id` with `ValueError` in both directions is the conservative fix. |
-| 4 | Low | `SplitResult.host` (lines 172–181), `SplitResult.port` (184–190), `_splitauthority()` (660–672) | Three copies of the port rule (*Maintainer Decisions*); `host` drifted once and shipped the `//12345` bug fixed in `a73b146`. A one-line comment at each site naming the other two would make the next edit touch all three. |
+| 2 | Low | `getpath()` (lines 300–307) | The traversal in Code #1 survives its proposed fix through `%2F`: `urisplit("/a/..%2F..%2Fetc").getpath()` returns `/a/../../etc` (`str` and `bytes`), because decoding creates the separators after dot-segment removal. `/` and `%2F` are not equivalent (RFC 3986 2.2), so this needs a second removal pass after decoding, or a documented warning that the result is not a safe file-system path. |
+| 3 | Low | `uridecode()` (line 95), `uridefrag()` (568), `urijoin()` (609), `getquerylist()` (345) | A wrong type still leaks `AttributeError`: `uridecode(42)`, `uridecode(None)`, `uridefrag(42)`, `urijoin("http://a/", 42)` and `getquerylist(sep=42)` all do, while 7.0.0 made `uriencode()` and `uricompose()` raise `TypeError` and `urisplit(42)` raises `TypeError` from `re`. The same `isinstance(..., str)` / `elif not bytes: raise TypeError` pattern as `uriencode()` would finish the job. |
+| 4 | Low | `_ip_literal()` (705–709), `_authority()` (683), `__parse_ip_literal()` (490) | Scoped IPv6 addresses pass through `ipaddress` unchecked. `uricompose(host=ipaddress.IPv6Address("fe80::1%eth0"))` and `host="fe80::1%eth0"` return `//[fe80::1%eth0]`, which is not a URI: RFC 3986 3.2.2 `IPv6address` has no zone and `%et` is not `pct-encoded`. `urisplit("//[fe80::1%25eth0]").gethost()` returns an address with `scope_id == "25eth0"`. Rejecting a `scope_id` with `ValueError` in both directions is the conservative fix. |
+| 5 | Low | `SplitResult.host` (lines 172–181), `SplitResult.port` (184–190), `_splitauthority()` (660–672) | Three copies of the port rule (*Maintainer Decisions*); `host` drifted once and shipped the `//12345` bug fixed in `a73b146`. A one-line comment at each site naming the other two would make the next edit touch all three. |
 
 ## Performance
 
