@@ -450,6 +450,12 @@ class SplitTest(unittest.TestCase):
                 querylist,
                 "Error parsing query list for %r" % query,
             )
+        for sep in (None, True, 42, 3.14, ["&"], bytearray(b"&")):
+            for parts in (urisplit("?a=b"), urisplit(b"?a=b")):
+                with self.assertRaises(TypeError, msg="sep=%r" % sep):
+                    parts.getquerylist(sep)  # type: ignore
+                with self.assertRaises(TypeError, msg="sep=%r" % sep):
+                    parts.getquerydict(sep)  # type: ignore
 
     def test_ipv4_literal(self):
         cases = [
