@@ -105,3 +105,12 @@ class JoinTest(unittest.TestCase):
 
     def test_path_traversal_limits(self):
         self.assertEqual(urijoin("http://a/", "../" * 100), "http://a/")
+
+    def test_type_errors(self):
+        for value in (None, True, 42, 3.14, ["foo"], bytearray(b"foo")):
+            for base in ("http://a/", b"http://a/"):
+                with self.assertRaises(TypeError, msg="ref=%r" % value):
+                    urijoin(base, value)  # type: ignore
+            for ref in ("b", b"b"):
+                with self.assertRaises(TypeError, msg="base=%r" % value):
+                    urijoin(value, ref)  # type: ignore

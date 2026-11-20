@@ -91,8 +91,10 @@ def uriencode(uristring, safe="", encoding="utf-8", errors="strict"):
 
 def uridecode(uristring, encoding="utf-8", errors="strict"):
     """Decode a URI string or string component."""
-    if not isinstance(uristring, bytes):
+    if isinstance(uristring, str):
         uristring = uristring.encode(encoding or "ascii", errors)
+    elif not isinstance(uristring, bytes):
+        raise TypeError("Invalid URI string type: %r" % type(uristring))
     parts = uristring.split(b"%")
     result = [parts[0]]
     append = result.append
@@ -358,8 +360,10 @@ class SplitResult(
             qsl = self.query.split(sep)
         elif isinstance(sep, bytes):
             qsl = self.query.split(sep.decode("ascii"))
-        else:
+        elif isinstance(sep, str):
             qsl = self.query.split(sep.encode("ascii"))
+        else:
+            raise TypeError("Invalid separator type: %r" % type(sep))
         result = []
         for parts in [qs.partition(self._EQ) for qs in qsl if qs]:
             name = uridecode(parts[0], encoding, errors)
@@ -583,10 +587,12 @@ class SplitResultString(SplitResult):
 
 def uridefrag(uristring):
     """Remove an existing fragment component from a URI reference string."""
-    if isinstance(uristring, bytes):
+    if isinstance(uristring, str):
+        parts = uristring.partition("#")
+    elif isinstance(uristring, bytes):
         parts = uristring.partition(b"#")
     else:
-        parts = uristring.partition("#")
+        raise TypeError("Invalid URI string type: %r" % type(uristring))
     return DefragResult(parts[0], parts[2] if parts[1] else None)
 
 
@@ -622,12 +628,11 @@ def urijoin(base, ref, strict=False):
     string.
 
     """
-    if isinstance(base, type(ref)):
-        return urisplit(base).transform(ref, strict).geturi()
-    elif isinstance(base, bytes):
-        return urisplit(base.decode()).transform(ref, strict).geturi()
-    else:
-        return urisplit(base).transform(ref.decode(), strict).geturi()
+    if isinstance(base, bytes) and not isinstance(ref, bytes):
+        base = base.decode()
+    elif isinstance(ref, bytes) and not isinstance(base, bytes):
+        ref = ref.decode()
+    return urisplit(base).transform(ref, strict).geturi()
 
 
 def isuri(uristring):
