@@ -605,6 +605,12 @@ class SplitTest(unittest.TestCase):
                 urisplit(uri).gethost()
             with self.assertRaisesRegex(ValueError, "mechanism not supported"):
                 urisplit(uri.encode("ascii")).gethost()
+        # RFC 3986 3.2.2: an IPv6address has no zone identifier
+        for uri in ["http://[fe80::1%eth0]/", "http://[fe80::1%25eth0]/"]:
+            with self.assertRaisesRegex(ValueError, "Zone identifier not supported"):
+                urisplit(uri).gethost()
+            with self.assertRaisesRegex(ValueError, "Zone identifier not supported"):
+                urisplit(uri.encode("ascii")).gethost()
 
     def test_encoding_none(self):
         uri = "foo://user@example.com:8042/over/there?name=ferret#nose"

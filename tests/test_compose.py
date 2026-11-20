@@ -139,6 +139,16 @@ class ComposeTest(unittest.TestCase):
         for host in ("[v1.x]", "[V1.x]", b"[v1.x]", b"[V1.x]"):
             with self.assertRaisesRegex(ValueError, "mechanism not supported"):
                 uricompose(host=host)
+        # RFC 3986 3.2.2: an IPv6address has no zone identifier
+        for host in (
+            "fe80::1%eth0",
+            b"fe80::1%eth0",
+            "[fe80::1%eth0]",
+            b"[fe80::1%25eth0]",
+            ipaddress.IPv6Address("fe80::1%eth0"),
+        ):
+            with self.assertRaisesRegex(ValueError, "Zone identifier not supported"):
+                uricompose(host=host)
         # invalid port value
         for port in (-1, "foo", 3.14):
             with self.assertRaises(ValueError, msg="port=%r" % port):

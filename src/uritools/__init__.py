@@ -504,7 +504,11 @@ class SplitResult(
             address = address.decode("ascii")
         if address.startswith(("v", "V")):
             raise ValueError("Address mechanism not supported")
-        return ipaddress.IPv6Address(address)
+        result = ipaddress.IPv6Address(address)
+        # RFC 3986 3.2.2: an IPv6address has no zone identifier
+        if result.scope_id is not None:
+            raise ValueError("Zone identifier not supported")
+        return result
 
 
 # TODO: make private?
@@ -701,7 +705,7 @@ def _authority(userinfo, host, port, encoding):
         authority.append(b"@")
 
     if isinstance(host, ipaddress.IPv6Address):
-        authority.append(b"[" + host.compressed.encode() + b"]")
+        authority.append(_ipv6address(host))
     elif isinstance(host, ipaddress.IPv4Address):
         authority.append(host.compressed.encode())
     elif isinstance(host, bytes):
@@ -723,11 +727,18 @@ def _authority(userinfo, host, port, encoding):
     return b"".join(authority) if authority else None
 
 
+def _ipv6address(address):
+    # RFC 3986 3.2.2: an IPv6address has no zone identifier
+    if address.scope_id is not None:
+        raise ValueError("Zone identifier not supported")
+    return b"[" + address.compressed.encode() + b"]"
+
+
 def _ip_literal(address):
     if address.startswith(("v", "V")):
         raise ValueError("Address mechanism not supported")
     else:
-        return b"[" + ipaddress.IPv6Address(address).compressed.encode() + b"]"
+        return _ipv6address(ipaddress.IPv6Address(address))
 
 
 def _host(host):
@@ -741,9 +752,11 @@ def _host(host):
     # IPv6 text form contains a ":", so other hosts skip the (failing) parse
     if b":" in host:
         try:
-            return _ip_literal(host.decode("utf-8"))
+            address = ipaddress.IPv6Address(host.decode("utf-8"))
         except ValueError:
             pass
+        else:
+            return _ipv6address(address)
     return uriencode(host.lower(), _SAFE_HOST, "utf-8")
 
 
