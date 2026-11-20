@@ -173,26 +173,23 @@ class SplitResult(
 
     @property
     def host(self):
-        authority = self.authority
-        if authority is None:
-            return None
-        _, _, hostinfo = authority.rpartition(self._AT)
-        host, present, port = hostinfo.rpartition(self._COLON)
-        if not present or port.lstrip(self._DIGITS):
-            return hostinfo
-        else:
-            return host
+        return self.__hostport()[0]
 
     @property
     def port(self):
+        return self.__hostport()[1]
+
+    def __hostport(self):
+        # a trailing ":" with nothing but ASCII digits after it is the port
         authority = self.authority
         if authority is None:
-            return None
-        _, present, port = authority.rpartition(self._COLON)
+            return None, None
+        _, _, hostinfo = authority.rpartition(self._AT)
+        host, present, port = hostinfo.rpartition(self._COLON)
         if present and not port.lstrip(self._DIGITS):
-            return port
+            return host, port
         else:
-            return None
+            return hostinfo, None
 
     def geturi(self):
         """Return the re-combined version of the original URI reference as a
