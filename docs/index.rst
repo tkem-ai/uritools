@@ -104,7 +104,9 @@ URI Composition
    will be encoded according to `encoding`, or :class:`bytes` objects.
    A `host` given as a Unicode string is always encoded as UTF-8,
    regardless of `encoding`, as :rfc:`3986#section-3.2.2` requires
-   for non-ASCII registered names.
+   for non-ASCII registered names.  An IPv6 address with a zone
+   identifier is not a valid `host` and raises :class:`ValueError`,
+   as it does in :meth:`SplitResult.gethost`.
 
    `authority` may also be passed a three-item sequence specifying
    userinfo, host and port subcomponents.  If both `authority` and any
